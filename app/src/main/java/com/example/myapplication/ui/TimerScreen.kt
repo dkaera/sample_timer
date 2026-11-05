@@ -11,6 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -19,18 +20,39 @@ import android.media.RingtoneManager
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.logic.TimerMode
+import com.example.myapplication.logic.TimerState
 import com.example.myapplication.logic.TimerViewModel
+import kotlinx.coroutines.flow.Flow
 
 @Composable
 fun TimerScreen(
     viewModel: TimerViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    TimerScreenWidget(
+        state = state,
+        timerCompleted = viewModel.timerCompleted,
+        onChangeMode = viewModel::changeMode,
+        onResetTimer = viewModel::resetTimer,
+        onToggleTimer = viewModel::toggleTimer
+    )
+}
+
+@Composable
+internal fun TimerScreenWidget(
+    state: TimerState,
+    timerCompleted: Flow<Unit>,
+    onChangeMode: (TimerMode) -> Unit,
+    onResetTimer: () -> Unit,
+    onToggleTimer: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
-    LaunchedEffect(Unit) {
-        viewModel.timerCompleted.collect {
+    LaunchedEffect(timerCompleted) {
+        timerCompleted.collect {
             snackbarHostState.showSnackbar("Time's up!")
             val ringtoneUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
             ringtoneUri?.let { uri ->
@@ -54,6 +76,7 @@ fun TimerScreen(
     }
 
     Scaffold(
+        modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         Box(
@@ -82,8 +105,9 @@ fun TimerScreen(
                                 index = timerMode.ordinal,
                                 count = TimerMode.entries.size
                             ),
-                            onClick = { viewModel.changeMode(timerMode) },
-                            selected = mode == timerMode
+                            onClick = { onChangeMode(timerMode) },
+                            selected = mode == timerMode,
+                            modifier = Modifier.testTag("ModeButton_${timerMode.name}")
                         ) {
                             Text(text = timerMode.name.replace("Break", " Break"))
                         }
@@ -109,6 +133,7 @@ fun TimerScreen(
 
                     Text(
                         text = formatTime(remainingTime),
+                        modifier = Modifier.testTag("TimerText"),
                         style = MaterialTheme.typography.displayLarge.copy(
                             fontSize = 80.sp,
                             fontWeight = FontWeight.Bold,
@@ -126,9 +151,10 @@ fun TimerScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     FilledTonalButton(
-                        onClick = { viewModel.resetTimer() },
+                        onClick = onResetTimer,
                         modifier = Modifier
-                            .size(64.dp),
+                            .size(64.dp)
+                            .testTag("ResetButton"),
                         shape = MaterialTheme.shapes.medium,
                         contentPadding = PaddingValues(0.dp)
                     ) {
@@ -142,8 +168,10 @@ fun TimerScreen(
                     Spacer(modifier = Modifier.width(24.dp))
 
                     FloatingActionButton(
-                        onClick = { viewModel.toggleTimer() },
-                        modifier = Modifier.size(100.dp),
+                        onClick = onToggleTimer,
+                        modifier = Modifier
+                            .size(100.dp)
+                            .testTag("StartPauseButton"),
                         shape = MaterialTheme.shapes.large,
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary
