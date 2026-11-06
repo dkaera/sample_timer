@@ -9,7 +9,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -121,11 +120,8 @@ internal fun TimerScreenWidget(
                 ) {
                     CircularProgressIndicator(
                         progress = { progress },
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .graphicsLayer {
-                                rotationZ = 270f // Start from top
-                            },
+                        // The indicator starts at 12 o'clock and sweeps clockwise.
+                        modifier = Modifier.fillMaxSize(),
                         strokeWidth = 12.dp,
                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                         color = MaterialTheme.colorScheme.primary
