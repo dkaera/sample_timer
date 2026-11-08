@@ -71,7 +71,8 @@ class TimerViewModel : ViewModel() {
             }
 
             if (_state.value.timeRemainingSeconds <= 0) {
-                pauseTimer()
+                _state.update { it.copy(isRunning = false) }
+                timerJob = null
                 _timerCompleted.emit(Unit)
             }
         }
