@@ -1,0 +1,79 @@
+name: Android tests
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: ${{ matrix.suite }} tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [unit, instrumented]
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Set up Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools platforms;android-37 build-tools;36.0.0'
+
+      - name: Run unit tests for all build variants
+        if: matrix.suite == 'unit'
+        run: bash ./gradlew :app:test :app:createDebugUnitTestCoverageReport --continue --stacktrace
+
+      - name: Enable emulator hardware acceleration
+        if: matrix.suite == 'instrumented'
+        run: |
+          sudo chmod a+rw /dev/kvm
+
+      - name: Run instrumented tests
+        if: matrix.suite == 'instrumented'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          script: bash ./gradlew :app:createDebugAndroidTestCoverageReport --continue --stacktrace
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: app/build/reports/coverage
+          flags: ${{ matrix.suite }}
+          name: ${{ matrix.suite }}-coverage
+          fail_ci_if_error: true
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.suite }}-test-reports
+          path: |
+            app/build/reports/coverage/
+            app/build/reports/tests/
+            app/build/test-results/
+            app/build/reports/androidTests/
+            app/build/outputs/androidTest-results/
+          if-no-files-found: ignore
+          retention-days: 14

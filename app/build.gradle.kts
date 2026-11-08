@@ -22,12 +22,19 @@ android {
     }
 
     buildTypes {
+        debug {
+            enableUnitTestCoverage = true
+            enableAndroidTestCoverage = true
+        }
         release {
             optimization {
                 enable = true
                 packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
             }
         }
+    }
+    testCoverage {
+        jacocoVersion = "0.8.16"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
